@@ -5,7 +5,8 @@ require("dotenv").config({ quiet: true });
 const dns = require("dns");
 require("node:dns/promises").setServers(["1.1.1.1", "8.8.8.8"]);
 dns.setDefaultResultOrder("ipv4first");
-
+const path = require("path");
+const morgan = require("morgan");
 // External dependencies
 const express = require("express");
 const cors = require("cors");
@@ -22,14 +23,25 @@ connectDB();
 // Global middleware
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json());
-
+app.use(morgan("dev"));
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"))
+);
 // Contact routes
 const contactRoutes = require("./src/routes/contactRoutes");
 app.use("/api/contact", contactRoutes);
 
 // Patient routes
 const patientRoutes = require("./src/routes/patientRoutes");
+const treatmentRoutes = require("./src/routes/treatmentRoutes");
+const medicalDocumentRoutes = require("./src/routes/medicalDocumentRoutes");
+
 app.use("/api/patients", patientRoutes);
+
+app.use("/api/treatments", treatmentRoutes);
+
+app.use("/api/medical-documents", medicalDocumentRoutes);
 
 // Doctor routes
 const doctorRoutes = require("./src/routes/doctorRoutes");

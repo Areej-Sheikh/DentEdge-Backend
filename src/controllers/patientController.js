@@ -1,139 +1,140 @@
 const Patient = require("../models/Patient");
 
-// GET MY PROFILE (logged-in patient)
+// GET MY PROFILE
 exports.getMyProfile = async (req, res) => {
   try {
+    console.log("\n========== GET MY PROFILE ==========");
+    console.log("[getMyProfile] Request received");
+    console.log("[getMyProfile] req.user =", req.user);
+
+    if (!req.user || !req.user.id) {
+      console.log("[getMyProfile] ERROR: req.user missing");
+
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
     const patient = await Patient.findById(req.user.id).select("-password");
-    if (!patient) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Patient not found" });
-    }
-    res.json({ success: true, data: patient });
-  } catch (error) {
-    console.error("Get My Profile Error:", error);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-};
-
-// GET TREATMENT HISTORY (logged-in patient)
-exports.getTreatmentHistory = async (req, res) => {
-  try {
-    console.log(
-      "[getTreatmentHistory] Request received for user:",
-      req.user.id,
-    );
-    console.log("req.user:", req.user); // what's in the token
-    console.log("looking for id:", req.user.id); // is this the right field?
-    const patient = await Patient.findById(req.user.id).select("dentalHistory");
-
-    console.log("[getTreatmentHistory] Patient found:", patient ? true : false);
-
-    if (!patient) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Patient not found" });
-    }
 
     console.log(
-      "[getTreatmentHistory] Dental history exists:",
-      patient.dentalHistory ? true : false,
+      "[getMyProfile] Patient found:",
+      patient ? patient._id : null
     );
 
-    res.status(200).json({
+    if (!patient) {
+      console.log("[getMyProfile] Patient not found");
+
+      return res.status(404).json({
+        success: false,
+        message: "Patient not found",
+      });
+    }
+
+    console.log("[getMyProfile] SUCCESS");
+
+    return res.json({
       success: true,
-      data: patient.dentalHistory || {},
+      data: patient,
     });
   } catch (error) {
-    console.error("Get Treatment History Error:", error);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-};
+    console.error("[getMyProfile] ERROR MESSAGE:", error.message);
+    console.error("[getMyProfile] ERROR STACK:", error.stack);
 
-// SAVE TREATMENT HISTORY (logged-in patient)
-exports.saveTreatmentHistory = async (req, res) => {
-  try {
-    console.log(
-      "[saveTreatmentHistory] Request received for user:",
-      req.user.id,
-    );
-    console.log("[saveTreatmentHistory] Payload:", req.body);
-
-    const { lastDentalVisit, previousTreatments, dentistNotes } = req.body;
-
-    const patient = await Patient.findByIdAndUpdate(
-      req.user.id,
-      {
-        $set: {
-          "dentalHistory.lastDentalVisit": lastDentalVisit || null,
-          "dentalHistory.previousTreatments": previousTreatments,
-          "dentalHistory.dentistNotes": dentistNotes,
-        },
-      },
-      { new: true, runValidators: true },
-    );
-
-    console.log(
-      "[saveTreatmentHistory] Patient updated:",
-      patient ? patient._id : null,
-    );
-
-    if (!patient) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Patient not found" });
-    }
-
-    console.log(
-      "[saveTreatmentHistory] Updated dentalHistory:",
-      patient.dentalHistory,
-    );
-
-    res.status(200).json({
-      success: true,
-      message: "Treatment history saved",
-      data: patient.dentalHistory,
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
     });
-  } catch (error) {
-    console.error("Treatment History Error:", error);
-    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// ─── Admin / CRM ──────────────────────────────────────────────────────────────
-
+// GET ALL PATIENTS
 exports.getPatients = async (req, res) => {
   try {
+    console.log("\n========== GET ALL PATIENTS ==========");
+    console.log("[getPatients] Request received");
+    console.log("[getPatients] User:", req.user);
+
     const patients = await Patient.find()
       .select("-password")
       .sort({ createdAt: -1 });
-    res.json({ success: true, count: patients.length, data: patients });
+
+    console.log(
+      "[getPatients] Total Patients Found:",
+      patients.length
+    );
+
+    console.log(
+      "[getPatients] Patient IDs:",
+      patients.map((p) => p._id)
+    );
+
+    console.log("[getPatients] SUCCESS");
+
+    return res.json({
+      success: true,
+      count: patients.length,
+      data: patients,
+    });
   } catch (error) {
-    console.error(error);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch patients" });
+    console.error("[getPatients] ERROR MESSAGE:", error.message);
+    console.error("[getPatients] ERROR STACK:", error.stack);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch patients",
+    });
   }
 };
 
+// GET PATIENT BY ID
 exports.getPatientById = async (req, res) => {
   try {
+    console.log("\n========== GET PATIENT BY ID ==========");
+    console.log("[getPatientById] Requested ID:", req.params.id);
+    console.log("[getPatientById] User:", req.user);
+
     const patient = await Patient.findById(req.params.id).select("-password");
+
+    console.log(
+      "[getPatientById] Patient Found:",
+      patient ? patient._id : null
+    );
+
     if (!patient) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Patient not found" });
+      console.log("[getPatientById] Patient does not exist");
+
+      return res.status(404).json({
+        success: false,
+        message: "Patient not found",
+      });
     }
-    res.json({ success: true, data: patient });
+
+    console.log("[getPatientById] SUCCESS");
+
+    return res.json({
+      success: true,
+      data: patient,
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Error fetching patient" });
+    console.error("[getPatientById] ERROR MESSAGE:", error.message);
+    console.error("[getPatientById] ERROR STACK:", error.stack);
+
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching patient",
+    });
   }
 };
 
+// UPDATE PATIENT
 exports.updatePatient = async (req, res) => {
   try {
-    console.log("UPDATE PAYLOAD:", req.body);
+    console.log("\n========== UPDATE PATIENT ==========");
+    console.log("[updatePatient] Patient ID:", req.params.id);
+    console.log("[updatePatient] User:", req.user);
+    console.log("[updatePatient] Incoming Body:", req.body);
 
     const allowedUpdates = {
       firstName: req.body.firstName,
@@ -149,79 +150,93 @@ exports.updatePatient = async (req, res) => {
       emergencyContact: req.body.emergencyContact || {},
     };
 
+    console.log(
+      "[updatePatient] Allowed Updates:",
+      JSON.stringify(allowedUpdates, null, 2)
+    );
+
     const patient = await Patient.findByIdAndUpdate(
       req.params.id,
       { $set: allowedUpdates },
       {
         new: true,
         runValidators: true,
-      },
+      }
     ).select("-password");
 
+    console.log(
+      "[updatePatient] Updated Patient:",
+      patient ? patient._id : null
+    );
+
     if (!patient) {
+      console.log("[updatePatient] Patient not found");
+
       return res.status(404).json({
         success: false,
         message: "Patient not found",
       });
     }
 
-    res.json({
+    console.log(
+      "[updatePatient] historyRecords count:",
+      patient?.historyRecords?.length || 0
+    );
+
+    console.log("[updatePatient] SUCCESS");
+
+    return res.json({
       success: true,
       message: "Patient updated successfully",
       data: patient,
     });
   } catch (error) {
-    console.error("UPDATE ERROR:", error.message);
+    console.error("[updatePatient] ERROR MESSAGE:", error.message);
+    console.error("[updatePatient] ERROR STACK:", error.stack);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message,
     });
   }
 };
 
+// DELETE PATIENT
 exports.deletePatient = async (req, res) => {
   try {
-    const patient = await Patient.findByIdAndDelete(req.params.id);
-    if (!patient) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Patient not found" });
-    }
-    res.json({ success: true, message: "Patient deleted successfully" });
-  } catch (error) {
-    console.error(error);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to delete patient" });
-  }
-};
+    console.log("\n========== DELETE PATIENT ==========");
+    console.log("[deletePatient] Requested ID:", req.params.id);
+    console.log("[deletePatient] User:", req.user);
 
-exports.addTreatment = async (req, res) => {
-  try {
-    const { treatmentName, treatmentDate, dentistName, notes } = req.body;
-    const patient = await Patient.findById(req.params.id);
+    const patient = await Patient.findByIdAndDelete(req.params.id);
+
+    console.log(
+      "[deletePatient] Deleted Patient:",
+      patient ? patient._id : null
+    );
+
     if (!patient) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Patient not found" });
+      console.log("[deletePatient] Patient not found");
+
+      return res.status(404).json({
+        success: false,
+        message: "Patient not found",
+      });
     }
-    patient.treatments.push({
-      treatmentName,
-      treatmentDate,
-      dentistName,
-      notes,
-    });
-    await patient.save();
-    res.json({
+
+    console.log("[deletePatient] SUCCESS");
+
+    return res.json({
       success: true,
-      message: "Treatment added successfully",
-      data: patient,
+      message: "Patient deleted successfully",
     });
   } catch (error) {
-    console.error(error);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to add treatment" });
+    console.error("[deletePatient] ERROR MESSAGE:", error.message);
+    console.error("[deletePatient] ERROR STACK:", error.stack);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete patient",
+    });
   }
 };

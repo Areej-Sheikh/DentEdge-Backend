@@ -2,18 +2,37 @@ const express = require("express");
 const router = express.Router();
 
 const patientController = require("../controllers/patientController");
+const treatmentController = require("../controllers/treatmentController");
+const { upload } = require("../middleware/uploadMedicalHistory"); // destructure
+const medicalDocumentController = require("../controllers/medicalDocumentController");
 const { protect } = require("../middleware/authMiddleware");
 
-// ─── Logged-in patient (must come before /:id) ────────────────────────────────
-router.get("/me",                 protect, patientController.getMyProfile);
-router.get("/treatment-history",  protect, patientController.getTreatmentHistory);
-router.post("/treatment-history", protect, patientController.saveTreatmentHistory);
+// Existing patient routes
+router.get("/me", protect, patientController.getMyProfile);
 
-// ─── Admin / doctor ───────────────────────────────────────────────────────────
-router.post("/:id/treatment", protect, patientController.addTreatment);
-router.get("/",                protect, patientController.getPatients);
-router.get("/:id",             protect, patientController.getPatientById);
-router.put("/:id",             protect, patientController.updatePatient);
-router.delete("/:id",          protect, patientController.deletePatient);
+// Treatment history — upload must be registered BEFORE /treatment-history
+router.post(
+  "/treatment-history/upload",
+  protect,
+  upload.single("file"),
+  medicalDocumentController.uploadTreatmentHistoryDocument,
+);
 
-module.exports = router; 
+router.get(
+  "/treatment-history",
+  protect,
+  treatmentController.getTreatmentHistory,
+);
+
+router.post(
+  "/treatment-history",
+  protect,
+  treatmentController.saveTreatmentHistory,
+);
+router.get("/", protect, patientController.getPatients);
+router.put("/:id", protect, patientController.updatePatient);
+router.delete("/:id", protect, patientController.deletePatient);
+
+router.get("/:id", protect, patientController.getPatientById);
+
+module.exports = router;
